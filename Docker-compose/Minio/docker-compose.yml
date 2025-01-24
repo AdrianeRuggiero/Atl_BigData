@@ -1,5 +1,29 @@
 version: "3.7"
 services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - spark_network
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_LISTENERS=PLAINTEXT://:9092
+    depends_on:
+      - zookeeper
+    networks:
+      - spark_network
 
   minio:
     hostname: minio
@@ -14,12 +38,9 @@ services:
     environment:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=minio123
-      - MINIO_ACCESS_KEY=minio
-      - MINIO_SECRET_KEY=minio123
     networks:
       - spark_network
 
-      
   mc:
     image: minio/mc
     container_name: mc
@@ -29,16 +50,13 @@ services:
       - AWS_SECRET_ACCESS_KEY=minio123
       - AWS_REGION=us-east-1
     entrypoint: >
-      /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio minio123) do echo '...waiting...' && sleep 1; done; /usr/bin/mc mb minio/warehouse; /usr/bin/mc policy set public minio/warehouse; exit 0; "    
+      /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio minio123) do echo '...waiting...' && sleep 1; done; /usr/bin/mc mb minio/warehouse; /usr/bin/mc policy set public minio/warehouse; exit 0; "
     depends_on:
       - minio
     networks:
       - spark_network
 
-
-      
 networks:
   spark_network:
     driver: bridge
     name: spark_network
-
